@@ -1,0 +1,69 @@
+#!/usr/bin/env python3
+
+import argparse
+import data_source
+import datetime
+import dyn200
+import logging
+import os
+import ui_window
+import signal
+import tkinter.filedialog
+
+
+DEFAULT_OUTPUT_FILE = f"{os.getenv('HOME')}/Desktop/torque_measurements/output-{datetime.datetime.now().strftime('%Y-%m-%d--%Hh%M')}.csv"
+DEFAULT_WINDOW_LEN = 4096
+
+logging.basicConfig()
+log = logging.getLogger()
+log.setLevel(logging.INFO)
+
+
+terminate = False
+data_store = None
+
+def sigint_handler(sig, frame):
+    shutdown()
+
+
+def shutdown():
+    global terminate
+    terminate = True
+    data_store.shutdown()
+
+
+
+if "__main__" == __name__:
+    parser = argparse.ArgumentParser("log data from a dyn-200 torque sensor")
+    parser.add_argument("--outfile", type=str, default=DEFAULT_OUTPUT_FILE, help=f"output file [{DEFAULT_OUTPUT_FILE}]")
+
+    parser.add_argument("--skip-first-idle", action="store_true", help="skip initial measurements if they are all zero")
+    parser.add_argument("--mock", action="store_true", help="skip initial measurements if they are all zero")
+    parser.add_argument("--len", type=int, default=DEFAULT_WINDOW_LEN, help=f"number of samples to display [{DEFAULT_WINDOW_LEN}]")
+    parser.add_argument("--ask-outfile", action="store_true", help="at start of day, use a UI requester to ask the user for the output file name")
+
+    args = vars(parser.parse_args())
+
+    if args["ask_outfile"]:
+        os.makedirs(os.path.dirname(args["outfile"]), exist_ok=True)
+
+        outfile = tkinter.filedialog.asksaveasfilename(title="output file",
+            initialdir=os.path.dirname(DEFAULT_OUTPUT_FILE), initialfile=os.path.basename(DEFAULT_OUTPUT_FILE))
+
+        if outfile:
+            args["outfile"] = outfile
+        else:
+            args["outfile"] = DEFAULT_OUTPUT_FILE
+
+    os.makedirs(os.path.dirname(args["outfile"]), exist_ok=True)
+
+    if args["mock"]:
+        dyn200_client = dyn200.DYN200Modbus_Mock()
+    else:
+        dyn200_client = dyn200.DYN200Modbus()
+
+    dyn200_client.configure_sensor(dyn200.DEFAULT_SETTINGS)
+
+    data_store = data_source.DataStore(dyn200_client, args["outfile"], args["len"])
+    signal.signal(signal.SIGINT, sigint_handler)
+    ui_window.show_ui(data_store, shutdown)

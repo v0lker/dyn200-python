@@ -1,0 +1,5 @@
+crc==7.0.0
+ipython==8.27.0
+minimalmodbus==2.1.1
+numpy==2.1.1
+matplotlib==3.9.2

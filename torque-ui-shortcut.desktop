@@ -1,0 +1,7 @@
+[Desktop Entry]
+Version=1.0
+Name=run motor test
+Type=Application
+Category=X-motor-test
+Terminal=true
+Exec=bash --login -c 'make -C ~/torque_dump run-ui-ask; read -p "please press any key!"'

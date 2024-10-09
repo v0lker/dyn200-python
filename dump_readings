@@ -1,0 +1,66 @@
+#!/usr/bin/env python3
+
+import argparse
+import csv
+import datetime
+import dyn200
+import minimalmodbus
+import logging
+import os
+import serial
+import signal
+import time
+
+
+DEFAULT_OUTPUT_FILE = f"{os.getenv('HOME')}/Desktop/output-{datetime.datetime.now().strftime('%Y-%m-%d--%Hh%M')}.csv"
+
+
+logging.basicConfig()
+log = logging.getLogger()
+log.setLevel(logging.INFO)
+
+
+terminate = False
+
+def sigint_handler(sig, frame):
+    global terminate
+    terminate = True
+
+
+
+def modbus_dump_forever(client, args):
+    out_file = args["outfile"]
+    skip_first_zeros = args["skip_first_idle"]
+
+    with open(out_file, "w", newline="") as outf:
+        log.info(f"logging to >{out_file}<")
+        csv_writer = csv.writer(outf)
+        csv_writer.writerow(["torque [Nm]", "rotation speed [1/s]", "power [W]"])
+
+        seen_non_idle = False
+        while not terminate:
+            t, s, p = client.get_torque_speed_power()
+
+            if (not skip_first_zeros) or seen_non_idle or (0 != t) or (0 != s) or (0 != p):
+                seen_non_idle = True
+                csv_writer.writerow((t,s,p))
+
+        log.info("done.")
+
+
+
+if "__main__" == __name__:
+    parser = argparse.ArgumentParser("log data from a dyn-200 torque sensor")
+    parser.add_argument("--outfile", type=str, default=DEFAULT_OUTPUT_FILE, help=f"output file [{DEFAULT_OUTPUT_FILE}]")
+
+    parser.add_argument("--skip-first-idle", action="store_true", help="skip initial measurements if they are all zero")
+
+    args = vars(parser.parse_args())
+
+    client = dyn200.DYN200Modbus()
+    client.configure_sensor(dyn200.DEFAULT_SETTINGS)
+    #res = client.read_registers(6, 4)
+    #print(res)
+    #client.get_torque_speed_power()
+    signal.signal(signal.SIGINT, sigint_handler)
+    modbus_dump_forever(client, args)

@@ -1,0 +1,46 @@
+WHAT IS IT? ===================================================================
+
+reads sensor data (torque, speed, power, or, in new-speak: newton-meterage,
+rpmage, wattage) from a DYN-200 sensor and write them into a CSV file
+
+
+
+WHAT'S NEEDED TO RUN? =========================================================
+
+* python3
+* (packages in requirements.txt: will be installed automatically, when run via
+  the makefile)
+
+
+
+HOW TO RUN? ===================================================================
+
+dump to file only:
+	./dump_readings [--help]
+
+plot graph and dump to file:
+	click shortcut on desktop or application menu entry 'run motor test' in category 'other'
+or
+	make run-ui
+or
+	./torque_ui [--help]
+
+
+
+IT DOESN'T CONNECT ("communication error") ====================================
+
+make sure the sensor is powered on
+
+make sure the correct communication parameters are set:
+* 14400 baud
+* 8N1
+* communication mode 1
+* slave id 1
+
+(to switch into the settings mode, press `K1` long. afterwards switch between
+the different pages by pressing `K1` briefly.)
+
+
+
+HOW TO CREATE THE (APP LAUNCH) SHORTCUT? ======================================
+	make update-shortcut
